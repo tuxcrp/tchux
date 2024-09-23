@@ -1,5 +1,7 @@
 # .github/workflows/release.yml
 
+name: tchux-release
+
 on:
   release:
     types: [created]
