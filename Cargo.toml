@@ -2,6 +2,16 @@
 name = "tchux"
 version = "0.1.0"
 edition = "2021"
+authors = [
+  "maverik-io <github.com/maverik-io",
+  "zochlas <github.com/zochlas"
+]
+license = "MIT OR Apache-2.0"
+description = "LAN chat app"
+readme = "README.md"
+repository = "https://github.com/maverik-io/musicman"
+keywords = ["cli", "chat","lan"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 log = "0.4.22"
