@@ -44,9 +44,10 @@ fn handle_client(mut stream: TcpStream) {
     }
 }
 
-pub fn server() {
-    let listener = TcpListener::bind("0.0.0.0:12345").expect("unable to connect to [...]::12345");
-    log::info!("Server listening on 0.0.0.0:12345");
+pub fn server(port: i16) {
+    let addr = format!("0.0.0.0:{port}");
+    let listener = TcpListener::bind(&addr).expect(&format!("unable to connect to [...]::{port}"));
+    log::info!("Server listening on {addr}");
 
     for stream in listener.incoming() {
         match stream {

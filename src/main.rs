@@ -9,21 +9,25 @@ mod client;
 mod server;
 
 fn main() {
-    let mode = {
-        match args().skip(1).next() {
-            Some(val) => val,
-            None => {
-                println!("tchux <server|client>");
-                exit(1)
-            }
+    let args: Vec<String> = args().collect();
+
+    let mode = match args.get(1) {
+        Some(val) => val.clone(),
+        None => {
+            println!("Usage: tchux <server|client> [port (default: 8080)]");
+            exit(1);
         }
+    };
+    let port = match args.get(2) {
+        Some(val) => val.parse::<i16>().unwrap(),
+        None => 8080,
     };
 
     match mode.as_str() {
         "server" => {
-            thread::spawn(|| server::server());
+            thread::spawn(move || server::server(port));
             sleep(Duration::from_millis(200));
-            client::client(Some("127.0.0.1:12345"));
+            client::client(Some(&format!("127.0.0.1:{port}")));
         }
         "client" => client::client(None),
         _ => (),
