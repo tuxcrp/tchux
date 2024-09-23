@@ -9,7 +9,7 @@ authors = [
 license = "MIT OR Apache-2.0"
 description = "LAN chat app"
 readme = "README.md"
-repository = "https://github.com/maverik-io/musicman"
+repository = "https://github.com/zochlas/tchux"
 keywords = ["cli", "chat","lan"]
 categories = ["command-line-utilities"]
 
