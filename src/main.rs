@@ -1,36 +1,31 @@
-use std::io::{Read, Write};
-use std::net::{TcpListener, TcpStream};
-use std::thread;
+use std::{
+    env::args,
+    process::exit,
+    thread::{self, sleep},
+    time::Duration,
+};
 
-fn handle_client(mut stream: TcpStream) {
-    let mut buffer = [0; 512];
-    loop {
-        match stream.read(&mut buffer) {
-            Ok(0) => break, // Connection closed
-            Ok(n) => {
-                println!("Recived: {}", String::from_utf8_lossy(&buffer[0..n]));
-                // Echo back the received data
-                if stream.write_all(&buffer[0..n]).is_err() {
-                    break;
-                }
+mod client;
+mod server;
+
+fn main() {
+    let mode = {
+        match args().skip(1).next() {
+            Some(val) => val,
+            None => {
+                println!("tchux <server|client>");
+                exit(1)
             }
-            Err(_) => break,
         }
-    }
-}
+    };
 
-fn main() -> std::io::Result<()> {
-    let listener = TcpListener::bind("0.0.0.0:12345")?;
-    println!("Server listening on 0.0.0.0:12345");
-
-    for stream in listener.incoming() {
-        match stream {
-            Ok(stream) => {
-                thread::spawn(|| handle_client(stream));
-            }
-            Err(e) => eprintln!("Connection failed: {}", e),
+    match mode.as_str() {
+        "server" => {
+            thread::spawn(|| server::server());
+            sleep(Duration::from_millis(200));
+            client::client(Some("127.0.0.1:12345"));
         }
+        "client" => client::client(None),
+        _ => (),
     }
-
-    Ok(())
 }
