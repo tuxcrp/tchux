@@ -1,6 +1,6 @@
 [package]
 name = "tchux"
-version = "0.1.0"
+version = "0.1.0-fix"
 edition = "2021"
 authors = [
   "maverik-io <github.com/maverik-io",
