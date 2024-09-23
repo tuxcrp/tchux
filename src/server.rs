@@ -1,47 +1,107 @@
 use simplelog::*;
-use std::fs::File;
+use std::collections::HashMap;
+use std::fs::{remove_file, File};
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
+use std::sync::{Arc, Mutex};
 use std::thread;
-use uuid::Uuid;
 
-fn handle_client(mut stream: TcpStream) {
-    let uuid_name = format!("tchux-{}.log", Uuid::new_v4());
-    WriteLogger::init(
-        LevelFilter::Info,
-        Config::default(),
-        File::create(uuid_name).unwrap(),
-    )
-    .unwrap();
+type ClientMap = Arc<Mutex<HashMap<String, (TcpStream, String)>>>;
+
+const COLORS: [&str; 6] = [
+    "\x1B[31m", "\x1B[32m", "\x1B[33m", "\x1B[34m", "\x1B[35m", "\x1B[36m",
+];
+
+fn get_color(username: &str) -> &'static str {
+    let hash: u32 = username
+        .bytes()
+        .fold(0, |acc, b| acc.wrapping_add(b as u32));
+    let index = hash as usize % COLORS.len();
+    COLORS[index]
+}
+
+fn handle_client(stream: TcpStream, clients: ClientMap) {
     let mut buffer = [0; 1024];
-    match stream.read(&mut buffer) {
-        Ok(0) => return,
-        Ok(n) => {
-            if n > 10 {}
-            if stream
-                .write_all(
-                    format!("blue|Welcome {}", String::from_utf8_lossy(&buffer[0..n])).as_bytes(),
-                )
-                .is_err()
+
+    #[allow(unused_assignments)]
+    let mut user_name = String::new();
+
+    match stream.try_clone().unwrap().read(&mut buffer) {
+        Ok(n) if n > 0 => {
+            user_name = String::from_utf8_lossy(&buffer[0..n]).trim().to_string();
+            let color = get_color(&user_name);
+            let welcome_message = format!("{}Welcome {}\x1B[0m", color, user_name);
+            if let Err(e) = stream
+                .try_clone()
+                .unwrap()
+                .write_all(welcome_message.as_bytes())
             {
-                eprintln!("Error sending message, Closing Connection");
+                eprintln!("Error sending welcome message: {}", e);
+                return;
             }
+            log::info!("New user connected: {}", user_name);
+            log::info!("Sent: {}", welcome_message);
         }
-        Err(_) => return,
+        _ => return,
     }
+
+    clients.lock().unwrap().insert(
+        user_name.clone(),
+        (
+            stream.try_clone().unwrap(),
+            get_color(&user_name).to_string(),
+        ),
+    );
+
     loop {
-        match stream.read(&mut buffer) {
-            Ok(0) => break, // Connection closed
+        match stream.try_clone().unwrap().read(&mut buffer) {
+            Ok(0) => break,
             Ok(n) => {
-                log::info!("Recived: {}", String::from_utf8_lossy(&buffer[0..n]));
-                // Echo back the received data
-                if stream.write_all(&buffer[..n]).is_err() {
-                    break;
-                }
+                let message = String::from_utf8_lossy(&buffer[0..n]).trim().to_string();
+                log::info!("Received from {}: {}", user_name, message);
+
+                let msg = format!("{}: {}", user_name, message);
+                broadcast_message(&clients, &msg, &user_name);
             }
-            Err(_) => break,
+            Err(e) => {
+                eprintln!("Error reading from client: {}", e);
+                break;
+            }
         }
     }
+
+    clients.lock().unwrap().remove(&user_name);
+    log::info!("User disconnected: {}", user_name);
+}
+
+fn broadcast_message(clients: &ClientMap, message: &str, sender: &str) {
+    let clients = clients.lock().unwrap();
+    let sender_color = clients
+        .get(sender)
+        .map(|(_, color)| color.as_str())
+        .unwrap_or("\x1B[0m");
+
+    for (username, (stream, _)) in clients.iter() {
+        let colored_message = if username == sender {
+            format!("{}{}\x1B[0m", sender_color, message)
+        } else {
+            format!(
+                "{}{}: {}\x1B[0m",
+                sender_color,
+                sender,
+                message.splitn(2, ": ").nth(1).unwrap_or("")
+            )
+        };
+
+        if let Err(e) = stream
+            .try_clone()
+            .unwrap()
+            .write_all(colored_message.as_bytes())
+        {
+            eprintln!("Error sending message to {}: {}", username, e);
+        }
+    }
+    log::info!("Broadcast: {}", message);
 }
 
 pub fn server(port: i16) {
@@ -49,13 +109,43 @@ pub fn server(port: i16) {
     let listener = TcpListener::bind(&addr).expect(&format!("unable to connect to [...]::{port}"));
     log::info!("Server listening on {addr}");
 
+    let log_name = format!("tchux-{port}.log");
+    WriteLogger::init(
+        LevelFilter::Info,
+        Config::default(),
+        File::create(&log_name).unwrap(),
+    )
+    .unwrap();
+    log::info!("Logging to file: {}", log_name);
+
+    let clients: ClientMap = Arc::new(Mutex::new(HashMap::new()));
+
+    let clients_clone = Arc::clone(&clients);
+    let log_name_clone = log_name.clone();
+    ctrlc::set_handler(move || {
+        println!("Server shutting down...");
+        let mut clients = clients_clone.lock().unwrap();
+        for (_, (stream, _)) in clients.iter_mut() {
+            let _ = stream.write_all(b"Server shutting down. Goodbye!");
+        }
+        clients.clear();
+        if let Err(e) = remove_file(&log_name_clone) {
+            eprintln!("Error removing log file: {}", e);
+        }
+        std::process::exit(0);
+    })
+    .expect("Error setting Ctrl-C handler");
+
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                log::info!("New Connection");
-                thread::spawn(|| handle_client(stream));
+                let clients_clone = Arc::clone(&clients);
+                thread::spawn(move || handle_client(stream, clients_clone));
             }
-            Err(e) => eprintln!("Connection failed: {}", e),
+            Err(e) => {
+                log::error!("Connection failed: {}", e);
+            }
         }
     }
 }
+

@@ -14,22 +14,35 @@ fn main() {
     let mode = match args.get(1) {
         Some(val) => val.clone(),
         None => {
-            println!("Usage: tchux <server|client> [port (default: 8080)]");
+            println!("Usage: tchux <server|client> [<port (default: 8080)|addr (for client)>]");
             exit(1);
         }
-    };
-    let port = match args.get(2) {
-        Some(val) => val.parse::<i16>().unwrap(),
-        None => 8080,
     };
 
     match mode.as_str() {
         "server" => {
+            let port = match args.get(2) {
+                Some(val) => val.parse::<i16>().unwrap(),
+                None => 8080,
+            };
+
             thread::spawn(move || server::server(port));
             sleep(Duration::from_millis(200));
             client::client(Some(&format!("127.0.0.1:{port}")));
         }
-        "client" => client::client(None),
+        "client" => {
+            let addr = match args.get(2) {
+                Some(val) => val.clone(),
+                None => {
+                    println!(
+                        "Usage: tchux <server|client> [<port (default: 8080)|addr (for client)>]"
+                    );
+                    exit(1);
+                }
+            };
+
+            client::client(Some(&addr));
+        }
         _ => (),
     }
 }

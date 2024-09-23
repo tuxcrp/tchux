@@ -1,7 +1,6 @@
 use std::io::{self, Read, Write};
 use std::net::TcpStream;
 use std::thread;
-use std::time::Duration;
 
 fn input(prompt: &str) -> String {
     print!("{prompt}");
@@ -38,15 +37,23 @@ pub fn client(serveraddr: Option<&str>) {
             match stream_clone.read(&mut buffer) {
                 Ok(n) if n > 0 => {
                     let message = String::from_utf8_lossy(&buffer[..n]);
-                    println!("{}", message);
+                    // Clear the current line and move cursor to the beginning
+                    print!("\r\x1B[K");
+                    // Print the colored message
+                    print!("{}", message);
+                    // Reset color and print the input prompt again
+                    print!("\x1B[0m\n> ");
+                    io::stdout().flush().unwrap();
                 }
-                _ => break,
+                _ => {
+                    println!("\nDisconnected from the server.");
+                    std::process::exit(0);
+                }
             }
         }
     });
 
     loop {
-        thread::sleep(Duration::from_millis(100));
         let message = input("> ");
         let message = message.trim();
         if message.len() > 0 {
@@ -59,3 +66,4 @@ pub fn client(serveraddr: Option<&str>) {
 
     println!("Disconnected from the server.");
 }
+

@@ -7,3 +7,4 @@ edition = "2021"
 log = "0.4.22"
 simplelog = "0.12.2"
 uuid = { version="1.10.0", features=["v4"]}
+ctrlc = "3.4.5"
