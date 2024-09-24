@@ -8,10 +8,9 @@ use std::thread;
 
 type ClientMap = Arc<Mutex<HashMap<String, (TcpStream, String)>>>;
 
-const COLORS: [&str; 6] = [
-    "\x1B[31m", "\x1B[32m", "\x1B[33m", "\x1B[34m", "\x1B[35m", "\x1B[36m",
-];
+const COLORS: [&str; 5] = ["\x1B[32m", "\x1B[33m", "\x1B[34m", "\x1B[35m", "\x1B[36m"];
 
+// I give up, I can't read this shit - Mav
 fn get_color(username: &str) -> &'static str {
     let hash: u32 = username
         .bytes()
@@ -29,18 +28,6 @@ fn handle_client(stream: TcpStream, clients: ClientMap) {
     match stream.try_clone().unwrap().read(&mut buffer) {
         Ok(n) if n > 0 => {
             user_name = String::from_utf8_lossy(&buffer[0..n]).trim().to_string();
-            let color = get_color(&user_name);
-            let welcome_message = format!("{}Welcome {}\x1B[0m", color, user_name);
-            if let Err(e) = stream
-                .try_clone()
-                .unwrap()
-                .write_all(welcome_message.as_bytes())
-            {
-                eprintln!("Error sending welcome message: {}", e);
-                return;
-            }
-            log::info!("New user connected: {}", user_name);
-            log::info!("Sent: {}", welcome_message);
         }
         _ => return,
     }
@@ -53,6 +40,15 @@ fn handle_client(stream: TcpStream, clients: ClientMap) {
         ),
     );
 
+    {
+        // welcome_message
+        let color = get_color(&user_name);
+        let welcome_message = format!("{}{}\x1B[0m just joined the chat :)", color, user_name);
+        broadcast_message(&clients, &welcome_message, "server");
+        log::info!("New user connected: {}", user_name);
+        log::info!("Sent: {}", welcome_message);
+    }
+
     loop {
         match stream.try_clone().unwrap().read(&mut buffer) {
             Ok(0) => break,
@@ -60,8 +56,7 @@ fn handle_client(stream: TcpStream, clients: ClientMap) {
                 let message = String::from_utf8_lossy(&buffer[0..n]).trim().to_string();
                 log::info!("Received from {}: {}", user_name, message);
 
-                let msg = format!("{}: {}", user_name, message);
-                broadcast_message(&clients, &msg, &user_name);
+                broadcast_message(&clients, &message, &user_name);
             }
             Err(e) => {
                 eprintln!("Error reading from client: {}", e);
@@ -71,7 +66,14 @@ fn handle_client(stream: TcpStream, clients: ClientMap) {
     }
 
     clients.lock().unwrap().remove(&user_name);
-    log::info!("User disconnected: {}", user_name);
+    {
+        // farewell_message
+        let color = get_color(&user_name);
+        let farewell_message = format!("{}{}\x1B[0m left :(", color, user_name);
+        broadcast_message(&clients, &farewell_message, "server");
+        log::info!("User disconnected: {}", user_name);
+        log::info!("Sent: {}", farewell_message);
+    }
 }
 
 fn broadcast_message(clients: &ClientMap, message: &str, sender: &str) {
@@ -79,19 +81,10 @@ fn broadcast_message(clients: &ClientMap, message: &str, sender: &str) {
     let sender_color = clients
         .get(sender)
         .map(|(_, color)| color.as_str())
-        .unwrap_or("\x1B[0m");
+        .unwrap_or("+\x1B[31m");
 
     for (username, (stream, _)) in clients.iter() {
-        let colored_message = if username == sender {
-            format!("{}{}\x1B[0m", sender_color, message)
-        } else {
-            format!(
-                "{}{}: {}\x1B[0m",
-                sender_color,
-                sender,
-                message.splitn(2, ": ").nth(1).unwrap_or("")
-            )
-        };
+        let colored_message = format!("{}{}\x1B[0m: {}", sender_color, sender, message);
 
         if let Err(e) = stream
             .try_clone()
@@ -148,4 +141,3 @@ pub fn server(port: i16) {
         }
     }
 }
-

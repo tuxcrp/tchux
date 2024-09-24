@@ -14,7 +14,7 @@ fn main() {
     let mode = match args.get(1) {
         Some(val) => val.clone(),
         None => {
-            println!("Usage: tchux <server|client> [<port (default: 8080)|addr (for client)>]");
+            println!("Usage: tchux <server|client> [<port (default: 8080) passphrase |addr (for client) passphrase>]");
             exit(1);
         }
     };
@@ -25,23 +25,31 @@ fn main() {
                 Some(val) => val.parse::<i16>().unwrap(),
                 None => 8080,
             };
+            let passphrase = match args.get(3) {
+                Some(val) => val.as_str(),
+                None => "IWasSoDumbIDidNotSetAPassword",
+            };
 
             thread::spawn(move || server::server(port));
             sleep(Duration::from_millis(200));
-            client::client(Some(&format!("127.0.0.1:{port}")));
+            client::client(format!("127.0.0.1:{port}").as_str(), passphrase);
         }
         "client" => {
             let addr = match args.get(2) {
                 Some(val) => val.clone(),
                 None => {
                     println!(
-                        "Usage: tchux <server|client> [<port (default: 8080)|addr (for client)>]"
+                        "Usage: tchux <server|client> [<port (default: 8080) passphrase |addr (for client) passphrase>]"
                     );
                     exit(1);
                 }
             };
+            let passphrase = match args.get(3) {
+                Some(val) => val.as_str(),
+                None => "IWasSoDumbIDidNotSetAPassword",
+            };
 
-            client::client(Some(&addr));
+            client::client(addr.as_str(), passphrase);
         }
         _ => (),
     }
