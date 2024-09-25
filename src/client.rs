@@ -8,7 +8,7 @@ use std::io::{self, Read, Write};
 use std::net::TcpStream;
 use std::thread;
 
-fn generate_key(passphrase: &str) -> [u8; 32] {
+pub fn generate_key(passphrase: &str) -> [u8; 32] {
     let mut hasher = Sha256::new();
     hasher.update(passphrase.as_bytes());
     let result = hasher.finalize();
@@ -17,7 +17,7 @@ fn generate_key(passphrase: &str) -> [u8; 32] {
     key
 }
 
-fn encrypt_message(key: &[u8], plaintext: &str) -> String {
+pub fn encrypt_message(key: &[u8], plaintext: &str) -> String {
     let cipher = Aes256Gcm::new(key.into());
 
     // Generate a random 12-byte nonce
@@ -37,7 +37,7 @@ fn encrypt_message(key: &[u8], plaintext: &str) -> String {
     URL_SAFE.encode(encrypted_message)
 }
 
-fn decrypt_message(key: &[u8], ciphertext: &[u8]) -> String {
+fn decrypt_message(key: &[u8], ciphertext: &[u8], handshake: bool) -> String {
     let decoded = String::from_utf8_lossy(ciphertext).to_string();
     let decoded_message = decoded.split(": ").last().unwrap();
     let sender = decoded.split(": ").next().unwrap();
@@ -55,8 +55,13 @@ fn decrypt_message(key: &[u8], ciphertext: &[u8]) -> String {
     let decrypted = cipher
         .decrypt(nonce, ciphertext)
         .expect("decryption failure!");
+    let decrypted_string = String::from_utf8(decrypted).unwrap();
 
-    format!("{sender}: {}", String::from_utf8(decrypted).unwrap())
+    if handshake {
+        decrypted_string
+    } else {
+        format!("{sender}: {}", decrypted_string)
+    }
 }
 
 fn input(prompt: &str) -> String {
@@ -75,6 +80,21 @@ pub fn client(serveraddr: &str, passphrase: &str) {
     println!("Connected to the server at {}", server_address);
     let key = generate_key(passphrase);
 
+    let mut buffer = [0; 1024];
+    let bytes_read = stream.read(&mut buffer).unwrap();
+
+    let encrypted_handshake = String::from_utf8_lossy(&buffer[..bytes_read]);
+    let handshake_bytes: &[u8] = encrypted_handshake.as_bytes();
+
+    let msg = "this is a cat >:) meow";
+    let decrypted_handshake = decrypt_message(&key, handshake_bytes, true);
+    println!("{}", decrypted_handshake == msg);
+    if decrypted_handshake != "this is a cat >:) meow" {
+        println!("Handshake failed. Disconnecting.");
+        return;
+    }
+    stream.write_all(decrypted_handshake.as_bytes()).unwrap();
+
     let name = input("Name: ");
     let name = name.trim();
 
@@ -89,7 +109,7 @@ pub fn client(serveraddr: &str, passphrase: &str) {
                     let mut message = String::from_utf8_lossy(&buffer[..n]).to_string();
                     match message.chars().next().unwrap() {
                         '+' => message = message.chars().skip(1).collect(),
-                        _ => message = decrypt_message(&key[..], &buffer[..n]).to_string(),
+                        _ => message = decrypt_message(&key[..], &buffer[..n], false).to_string(),
                     }
                     // Clear the current line and move cursor to the beginning
                     print!("\r\x1B[K");

@@ -6,11 +6,14 @@ use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+use crate::client::{encrypt_message, generate_key};
+
 type ClientMap = Arc<Mutex<HashMap<String, (TcpStream, String)>>>;
 
 const COLORS: [&str; 5] = ["\x1B[32m", "\x1B[33m", "\x1B[34m", "\x1B[35m", "\x1B[36m"];
 
 // I give up, I can't read this shit - Mav
+// HASH BABBY - zoch
 fn get_color(username: &str) -> &'static str {
     let hash: u32 = username
         .bytes()
@@ -19,8 +22,22 @@ fn get_color(username: &str) -> &'static str {
     COLORS[index]
 }
 
-fn handle_client(stream: TcpStream, clients: ClientMap) {
+fn handle_client(mut stream: TcpStream, clients: ClientMap, passphrase: &str) {
     let mut buffer = [0; 1024];
+
+    let key = generate_key(passphrase);
+    let msg = "this is a cat >:) meow";
+    let encrypted_handshake = encrypt_message(&key[..], msg);
+
+    stream.write_all(encrypted_handshake.as_bytes()).unwrap();
+
+    let bytes_read = stream.read(&mut buffer).unwrap();
+    let client_res = String::from_utf8_lossy(&buffer[..bytes_read]);
+
+    if client_res.trim() != msg {
+        println!("Handshake failed. Closing connection.");
+        return;
+    }
 
     #[allow(unused_assignments)]
     let mut user_name = String::new();
@@ -97,7 +114,7 @@ fn broadcast_message(clients: &ClientMap, message: &str, sender: &str) {
     log::info!("Broadcast: {}", message);
 }
 
-pub fn server(port: i16) {
+pub fn server(port: i16, passphrase: String) {
     let addr = format!("0.0.0.0:{port}");
     let listener = TcpListener::bind(&addr).expect(&format!("unable to connect to [...]::{port}"));
     log::info!("Server listening on {addr}");
@@ -133,7 +150,8 @@ pub fn server(port: i16) {
         match stream {
             Ok(stream) => {
                 let clients_clone = Arc::clone(&clients);
-                thread::spawn(move || handle_client(stream, clients_clone));
+                let passphrase_clone = passphrase.clone();
+                thread::spawn(move || handle_client(stream, clients_clone, &passphrase_clone));
             }
             Err(e) => {
                 log::error!("Connection failed: {}", e);
