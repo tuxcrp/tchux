@@ -182,7 +182,6 @@ fn handle_commands(command: &str) {
 
             std::process::exit(0);
         }
-
         _ => (),
     }
 }
