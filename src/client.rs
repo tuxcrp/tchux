@@ -130,12 +130,7 @@ pub fn client(serveraddr: &str, passphrase: &str) {
         let message = message.trim();
         if message.len() > 0 {
             match message.chars().next().unwrap() {
-                '\\' => {
-                    println!(
-                        "Commands have not yet been implemented, assuming you wanted to :exit"
-                    );
-                    break;
-                }
+                '\\' => handle_commands(message),
                 _ => {
                     let encrypted = encrypt_message(&key[..], message);
                     stream.write_all(encrypted.as_bytes()).unwrap();
@@ -143,6 +138,15 @@ pub fn client(serveraddr: &str, passphrase: &str) {
             }
         }
     }
+}
 
-    println!("Disconnected from the server.");
+fn handle_commands(command: &str) {
+    match command {
+        "\\exit" => {
+            println!("\nDisconnected from the server.");
+            std::process::exit(0);
+        }
+        "\\p" => {}
+        _ => (),
+    }
 }
