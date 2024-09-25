@@ -26,13 +26,14 @@ fn main() {
                 None => 8080,
             };
             let passphrase = match args.get(3) {
-                Some(val) => val.as_str(),
-                None => "IWasSoDumbIDidNotSetAPassword",
+                Some(val) => val.to_string(),
+                None => "IWasSoDumbIDidNotSetAPassword".to_string(),
             };
 
-            thread::spawn(move || server::server(port));
+            let passphrase_clone = passphrase.clone();
+            thread::spawn(move || server::server(port, passphrase_clone));
             sleep(Duration::from_millis(200));
-            client::client(format!("127.0.0.1:{port}").as_str(), passphrase);
+            client::client(format!("127.0.0.1:{port}").as_str(), &passphrase);
         }
         "client" => {
             let addr = match args.get(2) {
