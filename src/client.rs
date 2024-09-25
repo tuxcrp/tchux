@@ -86,9 +86,7 @@ pub fn client(serveraddr: &str, passphrase: &str) {
     let encrypted_handshake = String::from_utf8_lossy(&buffer[..bytes_read]);
     let handshake_bytes: &[u8] = encrypted_handshake.as_bytes();
 
-    let msg = "this is a cat >:) meow";
     let decrypted_handshake = decrypt_message(&key, handshake_bytes, true);
-    println!("{}", decrypted_handshake == msg);
     if decrypted_handshake != "this is a cat >:) meow" {
         println!("Handshake failed. Disconnecting.");
         return;
@@ -132,7 +130,7 @@ pub fn client(serveraddr: &str, passphrase: &str) {
         let message = message.trim();
         if message.len() > 0 {
             match message.chars().next().unwrap() {
-                ':' => {
+                '\\' => {
                     println!(
                         "Commands have not yet been implemented, assuming you wanted to :exit"
                     );
