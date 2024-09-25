@@ -4,9 +4,12 @@ use aes_gcm::{Aes256Gcm, Nonce};
 use base64::engine::general_purpose::URL_SAFE;
 use base64::Engine;
 use sha2::{Digest, Sha256};
-use std::io::{self, Read, Write};
+use std::fs::File;
+use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
-use std::thread;
+use std::path::PathBuf;
+use std::process::Command;
+use std::{env, thread};
 
 pub fn generate_key(passphrase: &str) -> [u8; 32] {
     let mut hasher = Sha256::new();
@@ -146,7 +149,40 @@ fn handle_commands(command: &str) {
             println!("\nDisconnected from the server.");
             std::process::exit(0);
         }
-        "\\p" => {}
+        "\\p" => {
+            let home = env::var("HOME").unwrap();
+            let shell = env::var("SHELL").unwrap();
+
+            let history_file = if shell.ends_with("zsh") {
+                PathBuf::from(&home).join(".zsh_history")
+            } else {
+                PathBuf::from(&home).join(".bash_history")
+            };
+
+            let file = File::open(&history_file).unwrap();
+            let reader = BufReader::new(file);
+            let lines: Vec<String> = reader.lines().collect::<Result<_, _>>().unwrap();
+
+            let new_content: Vec<String> = lines
+                .clone()
+                .into_iter()
+                .take(lines.len().saturating_sub(10))
+                .collect();
+
+            let mut file = File::create(history_file).unwrap();
+            for line in new_content {
+                writeln!(file, "{}", line).unwrap();
+            }
+
+            if cfg!(target_os = "windows") {
+                Command::new("cmd").args(&["/C", "cls"]).status().unwrap();
+            } else {
+                Command::new("clear").status().unwrap();
+            }
+
+            std::process::exit(0);
+        }
+
         _ => (),
     }
 }
