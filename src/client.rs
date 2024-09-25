@@ -131,7 +131,7 @@ pub fn client(serveraddr: &str, passphrase: &str) {
     loop {
         let message = input("> ");
         let message = message.trim();
-        if message.len() > 0 {
+        if !message.is_empty() {
             match message.chars().next().unwrap() {
                 '\\' => handle_commands(message),
                 _ => {
