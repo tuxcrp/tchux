@@ -35,7 +35,11 @@ fn handle_client(mut stream: TcpStream, clients: ClientMap, passphrase: &str) {
     let client_res = String::from_utf8_lossy(&buffer[..bytes_read]);
 
     if client_res.trim() != msg {
-        println!("Handshake failed. Closing connection.");
+        broadcast_message(
+            &clients,
+            "!!!Attempted login with invalid passphrase!!!",
+            "server",
+        );
         return;
     }
 

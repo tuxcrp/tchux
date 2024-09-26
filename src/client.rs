@@ -55,9 +55,15 @@ fn decrypt_message(key: &[u8], ciphertext: &[u8], handshake: bool) -> String {
     let ciphertext = &ciphertext[12..];
 
     // Decrypt the message
-    let decrypted = cipher
-        .decrypt(nonce, ciphertext)
-        .expect("decryption failure!");
+    let decrypted = {
+        match cipher.decrypt(nonce, ciphertext) {
+            Ok(val) => val,
+            _ => {
+                println!("Wrong passphrase! This action will be reported!");
+                std::process::exit(1);
+            }
+        }
+    };
     let decrypted_string = String::from_utf8(decrypted).unwrap();
 
     if handshake {
