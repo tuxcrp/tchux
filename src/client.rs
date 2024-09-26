@@ -160,7 +160,7 @@ fn handle_commands(command: &str) {
             let shell = env::var("SHELL").unwrap();
 
             let history_file = if shell.ends_with("zsh") {
-                PathBuf::from(&home).join(".zsh_history")
+                PathBuf::from(&home).join(".histfile")
             } else {
                 PathBuf::from(&home).join(".bash_history")
             };
