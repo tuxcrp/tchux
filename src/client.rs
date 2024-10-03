@@ -4,6 +4,7 @@ use aes_gcm::{Aes256Gcm, Nonce};
 use base64::engine::general_purpose::URL_SAFE;
 use base64::Engine;
 use sha2::{Digest, Sha256};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
@@ -83,6 +84,38 @@ fn input(prompt: &str) -> String {
     out
 }
 
+fn process(_in: String) -> String {
+    let emojis = HashMap::from([
+        (":happy:".to_string(), "😊"),
+        (":sad:".to_string(), "😢"),
+        (":angry:".to_string(), "😠"),
+        (":laughing:".to_string(), "😂"),
+        (":love:".to_string(), "❤️"),
+        (":heartbroken:".to_string(), "💔"),
+        (":thinking:".to_string(), "🤔"),
+        (":sleeping:".to_string(), "😴"),
+        (":winking:".to_string(), "😉"),
+        (":surprised:".to_string(), "😲"),
+    ]);
+    let mut out = String::new();
+    for token in _in.split(' ') {
+        let mut is_emoji = false;
+        for emoji_key in emojis.keys() {
+            if token == emoji_key {
+                out.push_str(emojis.get(emoji_key).unwrap().to_string().as_str());
+                out.push(' ');
+                is_emoji = true;
+                break;
+            }
+        }
+        if !is_emoji {
+            out.push_str(token);
+            out.push(' ');
+        }
+    }
+    out.trim().to_string()
+}
+
 pub fn client(serveraddr: &str, passphrase: &str) {
     let server_address = serveraddr.trim();
     let mut stream = TcpStream::connect(server_address).unwrap();
@@ -121,7 +154,7 @@ pub fn client(serveraddr: &str, passphrase: &str) {
                     // Clear the current line and move cursor to the beginning
                     print!("\r\x1B[K");
                     // Print the colored message
-                    print!("{}", message);
+                    print!("{}", process(message));
                     // Reset color and print the input prompt again
                     print!("\x1B[0m\n> ");
                     io::stdout().flush().unwrap();

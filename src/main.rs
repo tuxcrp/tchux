@@ -52,6 +52,12 @@ fn main() {
 
             client::client(addr.as_str(), passphrase);
         }
+        "server+tui" => {
+            println!("Tui is not yet implemented");
+        }
+        "client+tui" => {
+            println!("Tui is not yet implemented");
+        }
         _ => (),
     }
 }
