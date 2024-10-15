@@ -96,7 +96,9 @@ fn handle_client(mut stream: TcpStream, clients: ClientMap, passphrase: &str) {
         log::info!("Sent: {}", farewell_message);
     }
 }
-
+fn get_time() -> String {
+    chrono::Local::now().format("%H:%M:%S").to_string()
+}
 fn broadcast_message(clients: &ClientMap, message: &str, sender: &str) {
     let clients = clients.lock().unwrap();
     let sender_color = clients
@@ -105,7 +107,13 @@ fn broadcast_message(clients: &ClientMap, message: &str, sender: &str) {
         .unwrap_or("+\x1B[31m");
 
     for (username, (stream, _)) in clients.iter() {
-        let colored_message = format!("{}{}\x1B[0m: {}", sender_color, sender, message);
+        let colored_message = format!(
+            "{}❮{}❯ {}❯\x1B[0m: {}",
+            sender_color,
+            get_time(),
+            sender,
+            message
+        );
 
         if let Err(e) = stream
             .try_clone()

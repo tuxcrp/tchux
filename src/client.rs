@@ -70,7 +70,7 @@ fn decrypt_message(key: &[u8], ciphertext: &[u8], handshake: bool) -> String {
     if handshake {
         decrypted_string
     } else {
-        format!("{sender}: {}", decrypted_string)
+        format!("{sender} {}", decrypted_string)
     }
 }
 
@@ -90,12 +90,14 @@ fn process(_in: String) -> String {
         (":sad:".to_string(), "😢"),
         (":angry:".to_string(), "😠"),
         (":laughing:".to_string(), "😂"),
-        (":love:".to_string(), "❤️"),
+        (":heart:".to_string(), "❤️"),
         (":heartbroken:".to_string(), "💔"),
         (":thinking:".to_string(), "🤔"),
         (":sleeping:".to_string(), "😴"),
         (":winking:".to_string(), "😉"),
         (":surprised:".to_string(), "😲"),
+        (":skull:".to_string(), "💀"),
+        (":sparkle:".to_string(), "✨"),
     ]);
     let mut out = String::new();
     for token in _in.split(' ') {
@@ -156,7 +158,7 @@ pub fn client(serveraddr: &str, passphrase: &str) {
                     // Print the colored message
                     print!("{}", process(message));
                     // Reset color and print the input prompt again
-                    print!("\x1B[0m\n> ");
+                    print!("\x1B[0m\n❯❯❯ ");
                     io::stdout().flush().unwrap();
                 }
                 _ => {
@@ -168,7 +170,7 @@ pub fn client(serveraddr: &str, passphrase: &str) {
     });
 
     loop {
-        let message = input("> ");
+        let message = input("❯❯❯");
         let message = message.trim();
         if !message.is_empty() {
             match message.chars().next().unwrap() {
