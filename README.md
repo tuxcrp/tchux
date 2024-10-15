@@ -21,7 +21,7 @@ whereas server mode initializes a *tchux* server on your machine and then pops a
 ### Server mode 
 `tchux server <port> <password>`
 
-the default port in `8080` and the default password is `IWasTooDumbToSetAPassword`
+the default port in `8080` and the default password is `IWasSoDumbIDidNotSetAPassword`
 > Incase it was not obvious, use a password!
 
 > [!NOTE]
