@@ -1,5 +1,6 @@
 use std::{
     env::args,
+    io::Write,
     process::exit,
     thread::{self, sleep},
     time::Duration,
@@ -7,6 +8,7 @@ use std::{
 
 mod client;
 mod server;
+mod tui_client;
 
 fn main() {
     let args: Vec<String> = args().collect();
@@ -56,7 +58,29 @@ fn main() {
             println!("Tui is not yet implemented");
         }
         "client+tui" => {
-            println!("Tui is not yet implemented");
+            print!("Enter your name: ");
+            std::io::stdout().flush().unwrap();
+            let name = {
+                let mut name = String::new();
+                std::io::stdin().read_line(&mut name).unwrap();
+                name.trim().to_string()
+            };
+
+            let addr = match args.get(2) {
+                Some(val) => val.clone(),
+                None => {
+                    println!(
+                        "Usage: tchux <server|client> [<port (default: 8080) passphrase |addr (for client) passphrase>]"
+                    );
+                    exit(1);
+                }
+            };
+            let passphrase = match args.get(3) {
+                Some(val) => val.as_str(),
+                None => "IWasSoDumbIDidNotSetAPassword",
+            };
+
+            tui_client::client(addr.as_str(), name.as_str(), passphrase);
         }
         _ => (),
     }
