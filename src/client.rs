@@ -46,7 +46,11 @@ fn decrypt_message(key: &[u8], ciphertext: &[u8], handshake: bool) -> String {
     let decoded_message = decoded.split(": ").last().unwrap();
     let sender = decoded.split(": ").next().unwrap();
 
-    let ciphertext = URL_SAFE.decode(decoded_message).unwrap();
+    let ciphertext = URL_SAFE.decode(decoded_message).unwrap_or_else(|_| {
+        println!("Unable to decode the message. This should not happen!");
+        std::process::exit(1);
+    });
+
     let cipher = Aes256Gcm::new(key.into());
 
     // Extract the nonce (first 12 bytes)
@@ -120,12 +124,18 @@ fn process(_in: String) -> String {
 
 pub fn client(serveraddr: &str, passphrase: &str) {
     let server_address = serveraddr.trim();
-    let mut stream = TcpStream::connect(server_address).unwrap();
+    let mut stream = TcpStream::connect(server_address).unwrap_or_else(|_| {
+        println!("\x1B[31mUnable to connect to the server at {server_address}\x1B[0m");
+        std::process::exit(1);
+    });
     println!("Connected to the server at {}", server_address);
     let key = generate_key(passphrase);
 
     let mut buffer = [0; 1024];
-    let bytes_read = stream.read(&mut buffer).unwrap();
+    let bytes_read = stream.read(&mut buffer).unwrap_or_else(|_| {
+        println!("\x1B[31mFailed to read from the server\x1B[0m");
+        std::process::exit(1);
+    });
 
     let encrypted_handshake = String::from_utf8_lossy(&buffer[..bytes_read]);
     let handshake_bytes: &[u8] = encrypted_handshake.as_bytes();
@@ -162,7 +172,8 @@ pub fn client(serveraddr: &str, passphrase: &str) {
                     io::stdout().flush().unwrap();
                 }
                 _ => {
-                    println!("\nDisconnected from the server.");
+                    print!("\r\x1B[K");
+                    println!("Disconnected from the server.");
                     std::process::exit(0);
                 }
             }

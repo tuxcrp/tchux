@@ -67,7 +67,6 @@ fn handle_client(mut stream: TcpStream, clients: ClientMap, passphrase: &str) {
         let welcome_message = format!("{}{}\x1B[0m just joined the chat :)", color, user_name);
         broadcast_message(&clients, &welcome_message, "server");
         log::info!("New user connected: {}", user_name);
-        log::info!("Sent: {}", welcome_message);
     }
 
     loop {
@@ -145,12 +144,9 @@ pub fn server(port: i16, passphrase: String) {
     let clients_clone = Arc::clone(&clients);
     let log_name_clone = log_name.clone();
     ctrlc::set_handler(move || {
+        print!("\r\x1B[K");
         println!("Server shutting down...");
-        let mut clients = clients_clone.lock().unwrap();
-        for (_, (stream, _)) in clients.iter_mut() {
-            let _ = stream.write_all(b"Server shutting down. Goodbye!");
-        }
-        clients.clear();
+        clients_clone.lock().unwrap().clear();
         if let Err(e) = remove_file(&log_name_clone) {
             eprintln!("Error removing log file: {}", e);
         }
