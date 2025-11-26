@@ -1,21 +1,21 @@
-use std::{collections::HashMap, fs::File, sync::Arc};
+use std::{collections::HashMap, fs::File, sync::Arc, thread::sleep};
 
 use crate::utils::ClientMap;
 use tokio::{net::TcpListener, sync::Mutex};
-use tracing_subscriber::layer::SubscriberExt;
 
 mod handler;
 
 pub async fn server(port: String, passphrase: String) -> anyhow::Result<()> {
-    let file = tracing_subscriber::fmt::writer::BoxMakeWriter::new(
-        File::create(format!("tchux-{port}.log")).unwrap(),
-    );
-    let file = tracing_subscriber::fmt::layer().with_writer(file);
-    tracing_subscriber::registry().with(file);
+    let file = File::create(format!("tchux-{port}.log")).unwrap();
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file);
+
+    tracing_subscriber::fmt().with_writer(non_blocking).init();
 
     let addr = format!("0.0.0.0:{port}");
     let listener = TcpListener::bind(&addr).await.unwrap_or_else(|err| {
         tracing::error!("Unable to bind to {addr}: {err}");
+        println!("Unable to bind to {addr}: {err}");
+        drop(_guard);
         std::process::exit(1);
     });
 

@@ -26,5 +26,6 @@ aes-gcm = "0.10.3"
 sha2 = "0.10.9"
 base64 = "0.22.1"
 chrono = "0.4.42"
+tracing-appender = "0.2.3"
 
 
