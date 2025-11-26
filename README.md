@@ -19,31 +19,13 @@ Client mode is used to connect to *tchux* servers on the LAN
 whereas server mode initializes a *tchux* server on your machine and then pops a client too so you can join in :P
 
 ### Server mode 
-`tchux server <port> <password>`
-
-the default port in `8080` and the default password is `IWasSoDumbIDidNotSetAPassword`
-> Incase it was not obvious, use a password!
+`tchux server`
 
 > [!NOTE]
 > the server command starts an instance of the client too
 
 ### Client mode
-`tchux client <ip:port> <password>`
-
-If left blank, the password is assumed to be `IWasSoDumbIDidNotSetAPassword`
-
-The client supports commands --prefixed with an `\`. 
-Currently only 2 exist :-
-
-| Command | Function         |
-| ------- | ---------------- |
-| \exit   | exits the client |
-| \p      | panic-mode       |
+`tchux client`
 
 > [!NOTE]
-> panic mode exits the client, deletes a few lines from shell history and clears the screen. :)
-
-
-
-
-
+> exit the client with `esc`
