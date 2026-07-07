@@ -24,7 +24,7 @@ pub fn client(addr: String, passphrase: String) -> anyhow::Result<()> {
 
     let decrypted_handshake = decrypt_message(&key, handshake_bytes, true);
 
-    stream.write_all(decrypted_handshake.as_bytes()).unwrap();
+    stream.write_all(decrypted_handshake.as_bytes())?;
     let name = input("Name");
     stream.write_all(name.as_bytes())?;
 

@@ -27,7 +27,13 @@ pub async fn handle_client(
         .write_all(encrypted_handshake.as_bytes())
         .await?;
 
-    let bytes_read = reader.read(&mut buffer).await.unwrap();
+    let bytes_read = match reader.read(&mut buffer).await {
+        Ok(n) => n,
+        Err(e) => {
+            tracing::error!("Handshake read failed: {e}");
+            return Err(anyhow::anyhow!("Handshake read failed: {e}"));
+        }
+    };
     let client_res = String::from_utf8_lossy(&buffer[..bytes_read]);
     let client_res = client_res.trim();
 

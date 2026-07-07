@@ -18,19 +18,25 @@ async fn main() {
                     let port = port.clone();
                     let passphrase = passphrase.clone();
                     tokio::spawn(async move {
-                        server::server(port, passphrase)
-                            .await
-                            .expect("Server Panicked!")
+                        match server::server(port, passphrase).await {
+                            Err(e) => println!("Server Error: \x1b[31m{}\x1b[0m", e),
+                            _ => (),
+                        }
                     });
                 }
                 sleep(Duration::from_millis(100));
 
-                client::client(format!("0.0.0.0:{port}"), passphrase).expect("Client Panicked!");
+                if let Err(e) = client::client(format!("0.0.0.0:{port}"), passphrase) {
+                    println!("Client Error: \x1b[31m{}\x1b[0m", e);
+                }
             }
             "client" => {
-                let addr = input("Enter address");
+                let addr = input("Enter address:port");
                 let passphrase = input("Enter passphrase");
-                client::client(addr, passphrase).expect("Client Panicked!");
+                match client::client(addr, passphrase) {
+                    Err(e) => println!("Error: \x1b[31m{}\x1b[0m", e),
+                    _ => (),
+                }
             }
             _ => println!("Invalid mode, `client` or `server`!"),
         }

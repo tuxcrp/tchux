@@ -113,7 +113,9 @@ pub fn decrypt_message(key: &[u8], ciphertext: &[u8], handshake: bool) -> String
             }
         }
     };
-    let decrypted_string = String::from_utf8(decrypted).unwrap();
+    // Anyone who knows the shared passphrase can encrypt arbitrary bytes, including
+    // non-UTF-8 ones, so a peer could otherwise crash every other client on purpose.
+    let decrypted_string = String::from_utf8_lossy(&decrypted).to_string();
 
     if handshake {
         decrypted_string
@@ -124,11 +126,17 @@ pub fn decrypt_message(key: &[u8], ciphertext: &[u8], handshake: bool) -> String
 
 pub fn input(prompt: &str) -> String {
     print!("\x1B[32m{prompt}❯ \x1b[0m");
-    stdout().flush().unwrap();
+    if stdout().flush().is_err() {
+        eprintln!("tchux: failed to write to stdout");
+        std::process::exit(1);
+    }
     let mut out = String::new();
-    stdin().read_line(&mut out).unwrap();
+    if stdin().read_line(&mut out).is_err() {
+        eprintln!("tchux: failed to read input");
+        std::process::exit(1);
+    }
     print!("\x1B[F\x1B[K");
-    stdout().flush().unwrap();
+    let _ = stdout().flush();
     out.trim().to_string()
 }
 

@@ -64,8 +64,13 @@ pub fn tui(
 
             let visible = &app.messages[start..end];
 
-            let msg_box = Paragraph::new(visible.join("\n").into_text().unwrap())
-                .block(Block::default().borders(Borders::ALL).title("Chat"));
+            // Messages come from other peers in the chat (anyone who knows the shared
+            // passphrase can send one); malformed ANSI in a message must not crash our
+            // renderer, so fall back to showing it as plain text instead of unwrapping.
+            let joined = visible.join("\n");
+            let text = joined.into_text().unwrap_or_else(|_| joined.clone().into());
+            let msg_box =
+                Paragraph::new(text).block(Block::default().borders(Borders::ALL).title("Chat"));
             f.render_widget(msg_box, chunks[0]);
 
             let input_box = Paragraph::new(app.input.as_str())
